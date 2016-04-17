@@ -12,4 +12,4 @@ Use python measure_by_length.py -debug or python measure_by_lines.py -debug to p
 * The two scripts need mbuild, it should be put next to them.
 * The two scripts need boost 1.60.0., which should be placed in the boost_1_60_0 folder next to them.
 
-* The script also needs plotly to be installed. You can get it here: https://plot.ly/python/
+* The script also needs plotly to be installed. You can get it with "sudo pip install plotly". For more info, go to https://plot.ly/python/
