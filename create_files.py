@@ -22,7 +22,7 @@ if not os.path.exists("generated_cpps"):
 
 fo = open("generated_cpps/generated_" + sys.argv[1] + "_lines_" + sys.argv[2] + "_chars.cpp", "w")
 
-fo.write("#include \"../toUpperChar.hpp\"\n");
+fo.write("#include \"../include/toUpperChar.hpp\"\n");
 fo.write("int main()\n");
 fo.write("{\n");
 
