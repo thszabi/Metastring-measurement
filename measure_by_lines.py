@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import os, json, plotly, sys
+import os, json, plotly, argparse
 from subprocess import Popen, PIPE
 from plotly.graph_objs import Scatter, Layout
 
@@ -8,26 +8,64 @@ Xaxis = [];
 Yaxes = [];
 data  = [];
 
-to_be_plotted = raw_input("What do you want to plot? (user_time, memory or template instantiations): ");
-lowest_number = raw_input("Lowest number of strings: ");
-highest_number = raw_input("Highest number of strings: ");
-step = raw_input("Step between lowest and highest by: ");
-length = raw_input("Length of strings: ");
+parser = argparse.ArgumentParser(description='Measures runtime and memory usage with increasing number of lines');
+parser.add_argument(
+	'--plot',
+	required=True,
+	help='What to plot. It can be \'user_time\', \'memory\' or \'template instantiations\''
+);
 
-for i in range( int(lowest_number), int(highest_number)+1, int(step) ):
+parser.add_argument(
+	'--lowest',
+	type=int,
+	required=True,
+	help='The lowest number of lines.'
+);
 
-	os.system("python create_files.py " + str(i) + " " + length);
-	print "Done creating generated_" + str(i) + "_lines_" + length + "_chars.cpp";
+parser.add_argument(
+	'--highest',
+	type=int,
+	required=True,
+	help='The highest number of lines.'
+);
+
+parser.add_argument(
+	'--step',
+	type=int,
+	required=True,
+	help='Step between lowest and highest.'
+);
+
+parser.add_argument(
+	'--length',
+	type=int,
+	required=True,
+	help='Length of strings.'
+);
+
+parser.add_argument(
+	'--debug',
+	action='store_true',
+	required=False,
+	help='If used, the generated json will be displayed'
+);
+
+args = parser.parse_args();
+
+for i in range( args.lowest, args.highest+1, args.step ):
+
+	os.system("python create_files.py " + str(i) + " " + str(args.length));
+	print "Done creating generated_" + str(i) + "_lines_" + str(args.length) + "_chars.cpp";
 	
-	p = Popen(['mbuild', 'generated_cpps/generated_' + str(i) + '_lines_' + length + '_chars.cpp', '--verbose', '--', '-Iinclude', '-std=c++11'], stdout=PIPE, stderr=None, stdin=PIPE);
+	p = Popen(['mbuild', 'generated_cpps/generated_' + str(i) + '_lines_' + str(args.length) + '_chars.cpp', '--verbose', '--', '-Iinclude', '-std=c++11'], stdout=PIPE, stderr=None, stdin=PIPE);
 
 	output = p.stdout.read();
-	if len(sys.argv) > 1:
+	if args.debug:
 		print output;
 
 	new_data = json.loads( output );
 	data.append(new_data);
-	print "Done generating json for generated_" + str(i) + "_lines_" + length + "_chars.cpp";
+	print "Done generating json for generated_" + str(i) + "_lines_" + str(args.length) + "_chars.cpp";
 
 	Xaxis.append(i);
 
@@ -40,8 +78,8 @@ for i in range(len(data[0])):
 		if data[j][i]['stderr'] != "":
 			print data[j][i];
 		else:
-			if to_be_plotted != "template instantiations" or 'template instantiations' in elem:
-				Yaxis.append(data[j][i][to_be_plotted]);
+			if args.plot != "template instantiations" or 'template instantiations' in data[j][i]:
+				Yaxis.append(data[j][i][args.plot]);
 
 	plotly.offline.plot({
 	"data": [ Scatter(x=Xaxis, y=Yaxis) ],

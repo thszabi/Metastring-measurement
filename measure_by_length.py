@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import os, json, plotly, sys
+import os, json, plotly, argparse
 from subprocess import Popen, PIPE
 from plotly.graph_objs import Scatter, Layout
 
@@ -8,26 +8,50 @@ Xaxis = [];
 Yaxes = [];
 data  = [];
 
-to_be_plotted = raw_input("What do you want to plot? (user_time, memory or template instantiations): ");
-highest_length = raw_input("Highest length of strings: ");
-lines = raw_input("Number of strings per length: ");
+parser = argparse.ArgumentParser(description='Measures runtime and memory usage with increasing string length');
+parser.add_argument(
+	'--plot',
+	required=True,
+	help='What to plot. It can be \'user_time\', \'memory\' or \'template instantiations\''
+);
 
+parser.add_argument(
+	'--length',
+	type=int,
+	required=True,
+	help='The highest length of strings.'
+);
 
+parser.add_argument(
+	'--lines',
+	type=int,
+	required=True,
+	help='Number of strings per length.'
+);
 
-for i in range(0, int(highest_length)+1):
+parser.add_argument(
+	'--debug',
+	action='store_true',
+	required=False,
+	help='If used, the generated json will be displayed'
+);
 
-	os.system("python create_files.py " + lines + " " + str(i));
-	print "Done creating generated_" + lines + "_lines_" + str(i) + "_chars.cpp";
+args = parser.parse_args();
+
+for i in range(0, args.length+1):
+
+	os.system("python create_files.py " + str(args.lines) + " " + str(i));
+	print "Done creating generated_" + str(args.lines) + "_lines_" + str(i) + "_chars.cpp";
 	
-	p = Popen(['mbuild', 'generated_cpps/generated_' + lines + '_lines_' + str(i) + '_chars.cpp', '--verbose', '--', '-Iinclude', '-std=c++11'], stdout=PIPE, stderr=None, stdin=PIPE);
+	p = Popen(['mbuild', 'generated_cpps/generated_' + str(args.lines) + '_lines_' + str(i) + '_chars.cpp', '--verbose', '--', '-Iinclude', '-std=c++11'], stdout=PIPE, stderr=None, stdin=PIPE);
 
 	output = p.stdout.read();
-	if len(sys.argv) > 1:
+	if args.debug:
 		print output;
 
 	new_data = json.loads( output );
 	data.append(new_data);
-	print "Done generating json for generated_" + lines + "_lines_" + str(i) + "_chars.cpp";
+	print "Done generating json for generated_" + str(args.lines) + "_lines_" + str(i) + "_chars.cpp";
 
 	Xaxis.append(i);
 
@@ -40,8 +64,8 @@ for i in range(len(data[0])):
 		if data[j][i]['stderr'] != "":
 			print data[j][i];
 		else:
-			if to_be_plotted != "template instantiations" or 'template instantiations' in elem:
-				Yaxis.append(data[j][i][to_be_plotted]);
+			if args.plot != "template instantiations" or 'template instantiations' in data[j][i]:
+				Yaxis.append(data[j][i][args.plot]);
 
 	plotly.offline.plot({
 	"data": [ Scatter(x=Xaxis, y=Yaxis) ],

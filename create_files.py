@@ -40,7 +40,7 @@ for i in range(0, int(sys.argv[1])):
 		fo.write(", " + str(randint(-128, 127)));
 		#number = updateNumber(number);
 
-	fo.write("> > variable" + str(i) + ";\n");
+	fo.write("> >::type variable" + str(i) + ";\n");
 
 fo.write("\treturn 0;\n");
 fo.write("}");

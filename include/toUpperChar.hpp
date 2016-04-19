@@ -261,7 +261,10 @@ template <> struct toUpperChar<126> : boost::mpl::char_<94> {};
 template <> struct toUpperChar<127> : boost::mpl::char_<95> {};
 
 template <char... Cs>
-struct string {};
+struct string
+{
+	typedef string type;
+};
 
 template <class S>
 struct toUpper;
