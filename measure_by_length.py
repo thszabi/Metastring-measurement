@@ -4,16 +4,21 @@ import os, json, plotly, argparse
 from subprocess import Popen, PIPE
 from plotly.graph_objs import Scatter, Layout
 
+def remove_bad_characters(text):
+	bad_character_index = text.find("/");
+	while(bad_character_index >= 0):
+		text_list = list(text);
+		text_list[bad_character_index] = '\\';
+		text = "".join(text_list);
+		bad_character_index = text.find("/");
+	return text;
+
+
+
 Xaxis = [];
-Yaxes = [];
 data  = [];
 
 parser = argparse.ArgumentParser(description='Measures runtime and memory usage with increasing string length');
-parser.add_argument(
-	'--plot',
-	required=True,
-	help='What to plot. It can be \'user_time\', \'memory\' or \'template instantiations\''
-);
 
 parser.add_argument(
 	'--length',
@@ -58,18 +63,44 @@ for i in range(0, args.length+1):
 
 
 for i in range(len(data[0])):
-	Yaxis = [];
+	Yaxis_user_time = [];
+	Yaxis_memory = [];
+	Yaxis_instantiations = [];
 
 	for j in range(len(data)):
-		if data[j][i]['stderr'] != "":
-			print data[j][i];
+		if data[j][i]['compiles']:
+			Yaxis_user_time.append(data[j][i]['user_time']);
+			Yaxis_memory.append(data[j][i]['memory']);
+			if 'template instantiations' in data[j][i]:			
+				Yaxis_instantiations.append(data[j][i]['template instantiations']);
 		else:
-			if args.plot != "template instantiations" or 'template instantiations' in data[j][i]:
-				Yaxis.append(data[j][i][args.plot]);
+			print data[j][i];
 
-	plotly.offline.plot({
-	"data": [ Scatter(x=Xaxis, y=Yaxis) ],
-	"layout": Layout( title=data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'])
-	},
-	filename='generated_cpps/output_' + str(i) + '.html');
-	#filename='generated_cpps/output_' + data[0][i]['compiler name'] + "_" + data[0][i]['compiler version'] + "_" + data[0][i]['optimisation'] + '.html');
+
+	if data[0][i]['compiles']:
+		data[0][i]['compiler version'] = remove_bad_characters(data[0][i]['compiler version']);
+		if data[0][i]['optimisation'] == "":
+			data[0][i]['optimisation'] = "no optimisation";
+		path = 'plots/' + data[0][i]['compiler name'] + "/" + data[0][i]['compiler version'] + "/" + data[0][i]['optimisation'];
+
+		if not os.path.exists(path + "/"):
+			os.makedirs(path + "/");
+
+		plotly.offline.plot({
+		"data": [ Scatter(x=Xaxis, y=Yaxis_user_time) ],
+		"layout": Layout( title=data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'])
+		},
+		filename=path + '/user_time.html');
+
+		plotly.offline.plot({
+		"data": [ Scatter(x=Xaxis, y=Yaxis_memory) ],
+		"layout": Layout( title=data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'])
+		},
+		filename=path + '/memory.html');
+
+		if 'template instantiations' in data[0][i]:
+			plotly.offline.plot({
+			"data": [ Scatter(x=Xaxis, y=Yaxis_instantiations) ],
+			"layout": Layout( title=data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'])
+			},
+			filename=path + '/template_instantiations.html');

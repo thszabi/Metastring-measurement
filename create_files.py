@@ -33,7 +33,8 @@ fo.write("{\n");
 #A line consists of: "toUpper< string<" ++ length * character ++ "> > variableX" (where X is a number)
 for i in range(0, int(sys.argv[1])):
 	fo.write("\ttoUpper< string<");
-	fo.write(str(randint(-128, 127)));
+	if int(sys.argv[2]) > 0:
+		fo.write(str(randint(-128, 127)));
 	#number = updateNumber(number);
 	
 	for j in range(1, int(sys.argv[2])):
