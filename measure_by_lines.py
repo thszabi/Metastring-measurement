@@ -55,6 +55,13 @@ parser.add_argument(
 	help='If used, the generated json will be displayed'
 );
 
+parser.add_argument(
+	'--tex',
+	action='store_true',
+	required=False,
+	help='If used, a .tex file will be generated containing info about the plots'
+);
+
 args = parser.parse_args();
 
 for i in range( args.lowest, args.highest+1, args.step ):
@@ -75,6 +82,9 @@ for i in range( args.lowest, args.highest+1, args.step ):
 	Xaxis.append(i);
 
 
+
+if args.tex:
+	fo = open("plain_explanation.tex", "w");
 
 for i in range(len(data[0])):
 	Yaxis_user_time = [];
@@ -104,12 +114,52 @@ for i in range(len(data[0])):
 		"layout": Layout( title=data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'])
 		},
 		filename=path + '/user_time.html');
+		if args.tex:
+			fo.write(data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'] + " user_time picture goes here\n");
+			fo.write("This test was run with " + data[0][i]['compiler name'] + " (version " + data[0][i]['compiler version'] + ")");
+			if data[0][i]['optimisation'] == "no optimisation":
+				fo.write(" with no optimisation. ");
+			else:
+				fo.write(" with " + data[0][i]['optimisation'] + "optimisation. ");
+			fo.write("The graph shows how much time it took to compile files which contain a given number of compile-time strings. The first test contains " + str(args.lowest) + " strings, and the last test contains " + str(args.highest) + " strings. Each string is  " + str(args.length) + " characters long. The compiled source files contain the following lines:\n");
+			
+			fo.write("generated_" + str(args.lowest) + "_lines_" + str(args.length) + "_chars.cpp:\n")
+			p = Popen(['python', 'create_example.py', str(args.lowest), str(args.length)], stdout=PIPE, stderr=None, stdin=PIPE);
+			fo.write(p.stdout.read());
+
+			fo.write("generated_" + str(args.highest) + "_lines_" + str(args.length) + "_chars.cpp:\n")
+			p = Popen(['python', 'create_example.py', str(args.highest), str(args.length)], stdout=PIPE, stderr=None, stdin=PIPE);
+			fo.write(p.stdout.read());
+
+			fo.write("The graph shows that...\n");
+
+
 
 		plotly.offline.plot({
 		"data": [ Scatter(x=Xaxis, y=Yaxis_memory) ],
 		"layout": Layout( title=data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'])
 		},
 		filename=path + '/memory.html');
+		if args.tex:
+			fo.write(data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'] + " user_time picture goes here\n");
+			fo.write("This test was run with " + data[0][i]['compiler name'] + " (version " + data[0][i]['compiler version'] + ")");
+			if data[0][i]['optimisation'] == "no optimisation":
+				fo.write(" with no optimisation. ");
+			else:
+				fo.write(" with " + data[0][i]['optimisation'] + "optimisation. ");
+			fo.write("The graph shows how much memory was used during compilation of files which contain a given number of compile-time strings. The first test contains " + str(args.lowest) + " strings, and the last test contains " + str(args.highest) + " strings. Each string is  " + str(args.length) + " characters long. The compiled source files contain the following lines:\n");
+			
+			fo.write("generated_" + str(args.lowest) + "_lines_" + str(args.length) + "_chars.cpp:\n")
+			p = Popen(['python', 'create_example.py', str(args.lowest), str(args.length)], stdout=PIPE, stderr=None, stdin=PIPE);
+			fo.write(p.stdout.read());
+
+			fo.write("generated_" + str(args.highest) + "_lines_" + str(args.length) + "_chars.cpp:\n")
+			p = Popen(['python', 'create_example.py', str(args.highest), str(args.length)], stdout=PIPE, stderr=None, stdin=PIPE);
+			fo.write(p.stdout.read());
+
+			fo.write("The graph shows that...\n");
+
+
 
 		if 'template instantiations' in data[0][i]:
 			plotly.offline.plot({
@@ -117,3 +167,21 @@ for i in range(len(data[0])):
 			"layout": Layout( title=data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'])
 			},
 			filename=path + '/template_instantiations.html');
+		if args.tex:
+			fo.write(data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'] + " user_time picture goes here\n");
+			fo.write("This test was run with " + data[0][i]['compiler name'] + " (version " + data[0][i]['compiler version'] + ")");
+			if data[0][i]['optimisation'] == "no optimisation":
+				fo.write(" with no optimisation. ");
+			else:
+				fo.write(" with " + data[0][i]['optimisation'] + "optimisation. ");
+			fo.write("The graph shows how much templates were instantiated during compilation of files which contain a given number of compile-time strings. The first test contains " + str(args.lowest) + " strings, and the last test contains " + str(args.highest) + " strings. Each string is  " + str(args.length) + " characters long. The compiled source files contain the following lines:\n");
+			
+			fo.write("generated_" + str(args.lowest) + "_lines_" + str(args.length) + "_chars.cpp:\n")
+			p = Popen(['python', 'create_example.py', str(args.lowest), str(args.length)], stdout=PIPE, stderr=None, stdin=PIPE);
+			fo.write(p.stdout.read());
+
+			fo.write("generated_" + str(args.highest) + "_lines_" + str(args.length) + "_chars.cpp:\n")
+			p = Popen(['python', 'create_example.py', str(args.highest), str(args.length)], stdout=PIPE, stderr=None, stdin=PIPE);
+			fo.write(p.stdout.read());
+
+			fo.write("The graph shows that...\n");
