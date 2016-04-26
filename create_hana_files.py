@@ -15,15 +15,15 @@ fo.write("int main()\n");
 fo.write("{\n");
 
 for i in range(0, int(sys.argv[1])):
-	fo.write("\ttoUpper< boost::hana::string<");
+	fo.write("\tauto variable" + str(i) + " = toUpper(boost::hana::string_c<");
 	if int(sys.argv[2]) > 0:
-		fo.write(str(randint(-128, 127)));
+		fo.write("'" + chr(randint(97, 122)) + "'");
 	
 	for j in range(1, int(sys.argv[2])):
-		fo.write(", " + str(randint(-128, 127)));
+		fo.write(", '" + chr(randint(97, 122)) + "'");
 
-	fo.write("> >::type variable" + str(i) + ";\n");
+	fo.write(">);\n");
 
 fo.write("\treturn 0;\n");
 fo.write("}");
-fo.close()
+fo.close();

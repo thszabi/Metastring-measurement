@@ -261,8 +261,10 @@ template <> struct toUpperChar<125> : boost::mpl::char_<93> {};
 template <> struct toUpperChar<126> : boost::mpl::char_<94> {};
 template <> struct toUpperChar<127> : boost::mpl::char_<95> {};
 
-template <class S>
-struct toUpper;
-
-template <char... Cs>
-struct toUpper <boost::hana::string <Cs...> >: boost::hana::string < toUpperChar<Cs>::value... > {};
+auto toUpper = [](auto s) { // `s` is a `hana::string` object
+        return boost::hana::unpack(s, [](auto ...c) {
+            return boost::hana::string_c<
+                toUpperChar<decltype(c)::value>::value...
+            >;
+        });
+    };

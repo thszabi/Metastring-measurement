@@ -18,7 +18,7 @@ def remove_bad_characters(text):
 Xaxis = [];
 data_string     = [];
 data_metaparse  = [];
-#data_hana       = [];
+data_hana       = [];
 
 parser = argparse.ArgumentParser(description='Measures runtime and memory usage with increasing string length');
 
@@ -82,18 +82,18 @@ for i in range(0, args.length+1):
 	print "Done generating json for generated_metaparse_" + str(args.lines) + "_lines_" + str(i) + "_chars.cpp";
 
 
-#	os.system("python create_hana_files.py " + str(args.lines) + " " + str(i));
-#	print "Done creating generated_hana_" + str(args.lines) + "_lines_" + str(i) + "_chars.cpp";
+	os.system("python create_hana_files.py " + str(args.lines) + " " + str(i));
+	print "Done creating generated_hana_" + str(args.lines) + "_lines_" + str(i) + "_chars.cpp";
 	
-#	p = Popen(['mbuild', 'generated_cpps/generated_hana_' + str(args.lines) + '_lines_' + str(i) + '_chars.cpp', '--verbose', '--', '-Iinclude', '-std=c++11'], stdout=PIPE, stderr=None, stdin=PIPE);
+	p = Popen(['mbuild', 'generated_cpps/generated_hana_' + str(args.lines) + '_lines_' + str(i) + '_chars.cpp', '--verbose', '--', '-Iinclude', '-std=c++14'], stdout=PIPE, stderr=None, stdin=PIPE);
 
-#	output = p.stdout.read();
-#	if args.debug:
-#		print output;
+	output = p.stdout.read();
+	if args.debug:
+		print output;
 
-#	new_data = json.loads( output );
-#	data_hana.append(new_data);
-#	print "Done generating json for generated_hana_" + str(args.lines) + "_lines_" + str(i) + "_chars.cpp";
+	new_data = json.loads( output );
+	data_hana.append(new_data);
+	print "Done generating json for generated_hana_" + str(args.lines) + "_lines_" + str(i) + "_chars.cpp";
 
 	Xaxis.append(i);
 
@@ -102,40 +102,52 @@ for i in range(0, args.length+1):
 if args.tex:
 	fo = open("plain_explanation.tex", "w");
 
-for i in range(len(data_string[0])):
+number_of_compiler_and_version_combinations = len(data_string[0]);
+for i in range(number_of_compiler_and_version_combinations):
 	Yaxis_string_user_time = [];
 	Yaxis_string_memory = [];
 	Yaxis_string_instantiations = [];
 	Yaxis_metaparse_user_time = [];
 	Yaxis_metaparse_memory = [];
 	Yaxis_metaparse_instantiations = [];
-#	Yaxis_hana_user_time = [];
-#	Yaxis_hana_memory = [];
-#	Yaxis_hana_instantiations = [];
+	Yaxis_hana_user_time = [];
+	Yaxis_hana_memory = [];
+	Yaxis_hana_instantiations = [];
 
 	for j in range(len(data_string)):
 		if data_string[j][i]['compiles']:
 			Yaxis_string_user_time.append(data_string[j][i]['user_time']);
 			Yaxis_string_memory.append(data_string[j][i]['memory']);
-			Yaxis_metaparse_user_time.append(data_metaparse[j][i]['user_time']);
-			Yaxis_metaparse_memory.append(data_metaparse[j][i]['memory']);
-#			Yaxis_hana_user_time.append(data_hana[j][i]['user_time']);
-#			Yaxis_hana_memory.append(data_hana[j][i]['memory']);
-			if 'template instantiations' in data_string[j][i]:			
+			if 'template instantiations' in data_string[j][i]:
 				Yaxis_string_instantiations.append(data_string[j][i]['template instantiations']);
-				Yaxis_metaparse_instantiations.append(data_metaparse[j][i]['template instantiations']);
-#				Yaxis_hana_instantiations.append(data_hana[j][i]['template instantiations']);
 		else:
 			Yaxis_string_user_time.append(0);
 			Yaxis_string_memory.append(0);
+			if 'template instantiations' in data_string[j][i]:
+				Yaxis_string_instantiations.append(0);
+
+		if data_metaparse[j][i]['compiles']:
+			Yaxis_metaparse_user_time.append(data_metaparse[j][i]['user_time']);
+			Yaxis_metaparse_memory.append(data_metaparse[j][i]['memory']);
+			if 'template instantiations' in data_metaparse[j][i]:
+				Yaxis_metaparse_instantiations.append(data_metaparse[j][i]['template instantiations']);
+		else:
 			Yaxis_metaparse_user_time.append(0);
 			Yaxis_metaparse_memory.append(0);
-#			Yaxis_hana_user_time.append(0);
-#			Yaxis_hana_memory.append(0);
-			if 'template instantiations' in data_string[j][i]:			
-				Yaxis_string_instantiations.append(0);
+			if 'template instantiations' in data_metaparse[j][i]:
 				Yaxis_metaparse_instantiations.append(0);
-#				Yaxis_hana_instantiations.append(0);
+
+		if data_hana[j][i]['compiles']:
+			Yaxis_hana_user_time.append(data_hana[j][i]['user_time']);
+			Yaxis_hana_memory.append(data_hana[j][i]['memory']);
+			if 'template instantiations' in data_hana[j][i]:
+				Yaxis_hana_instantiations.append(data_hana[j][i]['template instantiations']);
+		else:
+			Yaxis_hana_user_time.append(0);
+			Yaxis_hana_memory.append(0);
+			if 'template instantiations' in data_hana[j][i]:
+				Yaxis_hana_instantiations.append(0);
+
 
 
 	if data_string[0][i]['compiles']:
@@ -148,7 +160,7 @@ for i in range(len(data_string[0])):
 			os.makedirs(path + "/");
 
 		plotly.offline.plot({
-		"data": [ Scatter(x=Xaxis, y=Yaxis_string_user_time), Scatter(x=Xaxis, y=Yaxis_metaparse_user_time) ],#, Scatter(x=Xaxis, y=Yaxis_hana_user_time) ],
+		"data": [ Scatter(x=Xaxis, y=Yaxis_string_user_time), Scatter(x=Xaxis, y=Yaxis_metaparse_user_time), Scatter(x=Xaxis, y=Yaxis_hana_user_time) ],
 		"layout": Layout( title=data_string[0][i]['compiler name'] + " " + data_string[0][i]['compiler version'] + " " + data_string[0][i]['optimisation'])
 		},
 		filename=path + '/user_time.html');
@@ -173,7 +185,7 @@ for i in range(len(data_string[0])):
 
 
 		plotly.offline.plot({
-		"data": [ Scatter(x=Xaxis, y=Yaxis_string_memory), Scatter(x=Xaxis, y=Yaxis_metaparse_memory) ],#, Scatter(x=Xaxis, y=Yaxis_hana_memory) ],
+		"data": [ Scatter(x=Xaxis, y=Yaxis_string_memory), Scatter(x=Xaxis, y=Yaxis_metaparse_memory), Scatter(x=Xaxis, y=Yaxis_hana_memory) ],
 		"layout": Layout( title=data_string[0][i]['compiler name'] + " " + data_string[0][i]['compiler version'] + " " + data_string[0][i]['optimisation'])
 		},
 		filename=path + '/memory.html');
@@ -199,7 +211,7 @@ for i in range(len(data_string[0])):
 
 		if 'template instantiations' in data_string[0][i]:
 			plotly.offline.plot({
-		"data": [ Scatter(x=Xaxis, y=Yaxis_string_instantiations), Scatter(x=Xaxis, y=Yaxis_metaparse_instantiations) ],#, Scatter(x=Xaxis, y=Yaxis_hana_instantiations) ],
+		"data": [ Scatter(x=Xaxis, y=Yaxis_string_instantiations), Scatter(x=Xaxis, y=Yaxis_metaparse_instantiations), Scatter(x=Xaxis, y=Yaxis_hana_instantiations) ],
 			"layout": Layout( title=data_string[0][i]['compiler name'] + " " + data_string[0][i]['compiler version'] + " " + data_string[0][i]['optimisation'])
 			},
 			filename=path + '/template_instantiations.html');
