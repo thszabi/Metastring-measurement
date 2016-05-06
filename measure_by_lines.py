@@ -1,6 +1,7 @@
 #!/usr/bin/python
+# coding=utf-8
 
-import os, json, plotly, argparse
+import os, json, plotly, argparse, codecs
 from subprocess import Popen, PIPE
 from plotly.graph_objs import Scatter, Layout
 
@@ -14,9 +15,32 @@ def remove_bad_characters(text):
 	return text;
 
 
+def write_graph_description(path, measure_type, compiler_name, compiler_version, optimisation, lowest, highest, length):
+	fo = codecs.open(path + "/" + measure_type + ".tex", "w", "utf-8");
+
+	fo.write(u"\\includegraphics{" + measure_type + u"}\n");
+	fo.write(u"Ez a mérés a " + compiler_name + u" fordító " + compiler_version + u" verziójával készült, ");
+	if optimisation == "no":
+		fo.write(u"optimalizáció nélkül. ");
+	else:
+		fo.write(optimisation  + u" optimalizációval. ");
+	if measure_type == "user-time":
+		fo.write(u"A fenti diagramon látható, mennyi időt vett igénybe növekvő mennyiségű fordítás idejű stringeket tartalmazó fájlok fordítása. ");
+	if measure_type == "memory":
+		fo.write(u"A fenti diagramon látható, mennyi memóriát vett igénybe növekvő mennyiségű fordítás idejű stringeket tartalmazó fájlok fordítása. ");
+	if measure_type == "template-instantiations":
+		fo.write(u"A fenti diagramon látható, hány template példányosítás történt növekvő mennyiségű fordítás idejű stringeket tartalmazó fájlok fordítása során. ");
+	fo.write(u"Az első fájl " + str(lowest) + u" darab stringet tartalmaz, az utolsó pedig " + str(highest) + u" darab stringet tartalmaz. Minden egyes string " + str(length) + u" karakter hosszú.\n");
+	fo.write(u"Az ábrán látható, hogy...\n\n");
+
+	fo.close();
+
+
 
 Xaxis = [];
-data  = [];
+data_string     = [];
+data_metaparse  = [];
+data_hana       = [];
 
 parser = argparse.ArgumentParser(description='Measures runtime and memory usage with increasing number of lines');
 
@@ -66,122 +90,207 @@ args = parser.parse_args();
 
 for i in range( args.lowest, args.highest+1, args.step ):
 
-	os.system("python create_files.py " + str(i) + " " + str(args.length));
-	print "Done creating generated_" + str(i) + "_lines_" + str(args.length) + "_chars.cpp";
+	os.system("python create_string_files.py " + str(i) + " " + str(args.length));
+	print "Done creating generated_string_" + str(i) + "_lines_" + str(args.length) + "_chars.cpp";
 	
-	p = Popen(['mbuild', 'generated_cpps/generated_' + str(i) + '_lines_' + str(args.length) + '_chars.cpp', '--verbose', '--', '-Iinclude', '-std=c++11'], stdout=PIPE, stderr=None, stdin=PIPE);
+	p = Popen(['mbuild', 'generated_cpps/generated_string_' + str(i) + '_lines_' + str(args.length) + '_chars.cpp', '--verbose', '--', '-Iinclude', '-std=c++11'], stdout=PIPE, stderr=None, stdin=PIPE);
 
 	output = p.stdout.read();
 	if args.debug:
 		print output;
 
 	new_data = json.loads( output );
-	data.append(new_data);
-	print "Done generating json for generated_" + str(i) + "_lines_" + str(args.length) + "_chars.cpp";
+	data_string.append(new_data);
+
+
+	os.system("python create_metaparse_files.py " + str(i) + " " + str(args.length));
+	print "Done creating generated_metaparse_" + str(i) + "_lines_" + str(args.length) + "_chars.cpp";
+	
+	p = Popen(['mbuild', 'generated_cpps/generated_metaparse_' + str(i) + '_lines_' + str(args.length) + '_chars.cpp', '--verbose', '--', '-Iinclude', '-std=c++11'], stdout=PIPE, stderr=None, stdin=PIPE);
+
+	output = p.stdout.read();
+	if args.debug:
+		print output;
+
+	new_data = json.loads( output );
+	data_metaparse.append(new_data);
+
+
+	os.system("python create_hana_files.py " + str(i) + " " + str(args.length));
+	print "Done creating generated_hana_" + str(i) + "_lines_" + str(args.length) + "_chars.cpp";
+	
+	p = Popen(['mbuild', 'generated_cpps/generated_hana_' + str(i) + '_lines_' + str(args.length) + '_chars.cpp', '--verbose', '--', '-Iinclude', '-std=c++14'], stdout=PIPE, stderr=None, stdin=PIPE);
+
+	output = p.stdout.read();
+	if args.debug:
+		print output;
+
+	new_data = json.loads( output );
+	data_hana.append(new_data);
+
 
 	Xaxis.append(i);
 
 
 
 if args.tex:
-	fo = open("plain_explanation.tex", "w");
+	fo = open("measurements.tex", "w");
 
-for i in range(len(data[0])):
-	Yaxis_user_time = [];
-	Yaxis_memory = [];
-	Yaxis_instantiations = [];
+number_of_compiler_and_version_combinations = len(data_string[0]);
+for i in range(number_of_compiler_and_version_combinations):
+	Yaxis_string_user_time = [];
+	Yaxis_string_memory = [];
+	Yaxis_string_instantiations = [];
+	Yaxis_metaparse_user_time = [];
+	Yaxis_metaparse_memory = [];
+	Yaxis_metaparse_instantiations = [];
+	Yaxis_hana_user_time = [];
+	Yaxis_hana_memory = [];
+	Yaxis_hana_instantiations = [];
 
-	for j in range(len(data)):
-		if data[j][i]['compiles']:
-			Yaxis_user_time.append(data[j][i]['user_time']);
-			Yaxis_memory.append(data[j][i]['memory']);
-			if 'template instantiations' in data[j][i]:			
-				Yaxis_instantiations.append(data[j][i]['template instantiations']);
+	for j in range(len(data_string)):
+		if data_string[j][i]['compiles']:
+			Yaxis_string_user_time.append(data_string[j][i]['user_time']);
+			Yaxis_string_memory.append(data_string[j][i]['memory']);
+			if 'template instantiations' in data_string[j][i]:
+				Yaxis_string_instantiations.append(data_string[j][i]['template instantiations']);
 		else:
-			print data[j][i];
+			Yaxis_string_user_time.append(0);
+			Yaxis_string_memory.append(0);
+			if 'template instantiations' in data_string[j][i]:
+				Yaxis_string_instantiations.append(0);
 
-	if data[0][i]['compiles']:
-		data[0][i]['compiler version'] = remove_bad_characters(data[0][i]['compiler version']);
-		if data[0][i]['optimisation'] == "":
-			data[0][i]['optimisation'] = "no optimisation";
-		path = 'plots/' + data[0][i]['compiler name'] + "/" + data[0][i]['compiler version'] + "/" + data[0][i]['optimisation'];
+		if data_metaparse[j][i]['compiles']:
+			Yaxis_metaparse_user_time.append(data_metaparse[j][i]['user_time']);
+			Yaxis_metaparse_memory.append(data_metaparse[j][i]['memory']);
+			if 'template instantiations' in data_metaparse[j][i]:
+				Yaxis_metaparse_instantiations.append(data_metaparse[j][i]['template instantiations']);
+		else:
+			Yaxis_metaparse_user_time.append(0);
+			Yaxis_metaparse_memory.append(0);
+			if 'template instantiations' in data_metaparse[j][i]:
+				Yaxis_metaparse_instantiations.append(0);
+
+		if data_hana[j][i]['compiles']:
+			Yaxis_hana_user_time.append(data_hana[j][i]['user_time']);
+			Yaxis_hana_memory.append(data_hana[j][i]['memory']);
+			if 'template instantiations' in data_hana[j][i]:
+				Yaxis_hana_instantiations.append(data_hana[j][i]['template instantiations']);
+		else:
+			Yaxis_hana_user_time.append(0);
+			Yaxis_hana_memory.append(0);
+			if 'template instantiations' in data_hana[j][i]:
+				Yaxis_hana_instantiations.append(0);
+
+
+
+	if data_string[0][i]['compiles']:
+		data_string[0][i]['compiler version'] = remove_bad_characters(data_string[0][i]['compiler version']);
+		if data_string[0][i]['optimisation'] == "":
+			data_string[0][i]['optimisation'] = "no";
+		path = 'plots/' + data_string[0][i]['compiler name'] + "/" + data_string[0][i]['compiler version'] + "/" + data_string[0][i]['optimisation'];
 
 		if not os.path.exists(path + "/"):
 			os.makedirs(path + "/");
 
+
+		scatter_string = Scatter(
+			x=Xaxis,
+			y=Yaxis_string_user_time,
+			name='Basic method',
+			mode='lines+text',
+			text=map(str, Yaxis_string_user_time),
+			textposition='bottom right',
+			textfont=dict(size=18));
+		scatter_metaparse = Scatter(
+			x=Xaxis,
+			y=Yaxis_metaparse_user_time,
+			name='Metaparse\'s String',
+			mode='lines+text',
+			text=map(str, Yaxis_metaparse_user_time),
+			textposition='bottom right',
+			textfont=dict(size=18));
+		scatter_hana = Scatter(
+			x=Xaxis,
+			y=Yaxis_hana_user_time,
+			name='Hana\'s String',
+			mode='lines+text',
+			text=map(str, Yaxis_hana_user_time),
+			textposition='bottom right',
+			textfont=dict(size=18));
 		plotly.offline.plot({
-		"data": [ Scatter(x=Xaxis, y=Yaxis_user_time) ],
-		"layout": Layout( title=data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'])
+			"data": [ scatter_string, scatter_metaparse, scatter_hana ],
+			"layout": Layout( title="Compilation time with " + data_string[0][i]['compiler name'] + " " + data_string[0][i]['compiler version'] + " (" + data_string[0][i]['optimisation'] + " optimisation)", xaxis=dict(title='Stringek száma'), yaxis=dict(title='Idő (mp)'))
 		},
-		filename=path + '/user_time.html');
+		filename=path + '/user-time.html');
 		if args.tex:
-			fo.write(data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'] + " user_time picture goes here\n");
-			fo.write("This test was run with " + data[0][i]['compiler name'] + " (version " + data[0][i]['compiler version'] + ")");
-			if data[0][i]['optimisation'] == "no optimisation":
-				fo.write(" with no optimisation. ");
-			else:
-				fo.write(" with " + data[0][i]['optimisation'] + "optimisation. ");
-			fo.write("The graph shows how much time it took to compile files which contain a given number of compile-time strings. The first test contains " + str(args.lowest) + " strings, and the last test contains " + str(args.highest) + " strings. Each string is  " + str(args.length) + " characters long. The compiled source files contain the following lines:\n");
-			
-			fo.write("generated_" + str(args.lowest) + "_lines_" + str(args.length) + "_chars.cpp:\n")
-			p = Popen(['python', 'create_example.py', str(args.lowest), str(args.length)], stdout=PIPE, stderr=None, stdin=PIPE);
-			fo.write(p.stdout.read());
-
-			fo.write("generated_" + str(args.highest) + "_lines_" + str(args.length) + "_chars.cpp:\n")
-			p = Popen(['python', 'create_example.py', str(args.highest), str(args.length)], stdout=PIPE, stderr=None, stdin=PIPE);
-			fo.write(p.stdout.read());
-
-			fo.write("The graph shows that...\n");
+			write_graph_description(path, "user-time", data_string[0][i]['compiler name'], data_string[0][i]['compiler version'], data_string[0][i]['optimisation'], args.lowest, args.highest, args.length);
 
 
 
+		scatter_string = Scatter(
+			x=Xaxis,
+			y=Yaxis_string_memory,
+			name='Basic method',
+			mode='lines+text',
+			text=map(str, Yaxis_string_memory),
+			textposition='bottom right',
+			textfont=dict(size=18));
+		scatter_metaparse = Scatter(
+			x=Xaxis,
+			y=Yaxis_metaparse_memory,
+			name='Metaparse\'s String',
+			mode='lines+text',
+			text=map(str, Yaxis_metaparse_memory),
+			textposition='bottom right',
+			textfont=dict(size=18));
+		scatter_hana = Scatter(
+			x=Xaxis,
+			y=Yaxis_hana_memory,
+			name='Hana\'s String',
+			mode='lines+text',
+			text=map(str, Yaxis_hana_memory),
+			textposition='bottom right',
+			textfont=dict(size=18));
 		plotly.offline.plot({
-		"data": [ Scatter(x=Xaxis, y=Yaxis_memory) ],
-		"layout": Layout( title=data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'])
+		"data": [ scatter_string, scatter_metaparse, scatter_hana ],
+		"layout": Layout( title="Memory usage with " + data_string[0][i]['compiler name'] + " " + data_string[0][i]['compiler version'] + " (" + data_string[0][i]['optimisation'] + " optimisation)", xaxis=dict(title='Stringek száma'), yaxis=dict(title='Felhasznált memória (KB)'))
 		},
 		filename=path + '/memory.html');
 		if args.tex:
-			fo.write(data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'] + " user_time picture goes here\n");
-			fo.write("This test was run with " + data[0][i]['compiler name'] + " (version " + data[0][i]['compiler version'] + ")");
-			if data[0][i]['optimisation'] == "no optimisation":
-				fo.write(" with no optimisation. ");
-			else:
-				fo.write(" with " + data[0][i]['optimisation'] + "optimisation. ");
-			fo.write("The graph shows how much memory was used during compilation of files which contain a given number of compile-time strings. The first test contains " + str(args.lowest) + " strings, and the last test contains " + str(args.highest) + " strings. Each string is  " + str(args.length) + " characters long. The compiled source files contain the following lines:\n");
-			
-			fo.write("generated_" + str(args.lowest) + "_lines_" + str(args.length) + "_chars.cpp:\n")
-			p = Popen(['python', 'create_example.py', str(args.lowest), str(args.length)], stdout=PIPE, stderr=None, stdin=PIPE);
-			fo.write(p.stdout.read());
-
-			fo.write("generated_" + str(args.highest) + "_lines_" + str(args.length) + "_chars.cpp:\n")
-			p = Popen(['python', 'create_example.py', str(args.highest), str(args.length)], stdout=PIPE, stderr=None, stdin=PIPE);
-			fo.write(p.stdout.read());
-
-			fo.write("The graph shows that...\n");
+			write_graph_description(path, "memory", data_string[0][i]['compiler name'], data_string[0][i]['compiler version'], data_string[0][i]['optimisation'], args.lowest, args.highest, args.length);
 
 
 
-		if 'template instantiations' in data[0][i]:
+		if 'template instantiations' in data_string[0][i]:
+			scatter_string = Scatter(
+				x=Xaxis,
+				y=Yaxis_string_instantiations,
+				name='Basic method',
+				mode='lines+text',
+				text=map(str, Yaxis_string_instantiations),
+				textposition='bottom right',
+				textfont=dict(size=18));
+			scatter_metaparse = Scatter(
+				x=Xaxis,
+				y=Yaxis_metaparse_instantiations,
+				name='Metaparse\'s String',
+				mode='lines+text',
+				text=map(str, Yaxis_metaparse_instantiations),
+				textposition='bottom right',
+				textfont=dict(size=18));
+			scatter_hana = Scatter(
+				x=Xaxis,
+				y=Yaxis_hana_instantiations,
+				name='Hana\'s String',
+				mode='lines+text',
+				text=map(str, Yaxis_hana_instantiations),
+				textposition='bottom right',
+				textfont=dict(size=18));
 			plotly.offline.plot({
-			"data": [ Scatter(x=Xaxis, y=Yaxis_instantiations) ],
-			"layout": Layout( title=data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'])
-			},
+				"data": [ scatter_string, scatter_metaparse, scatter_hana ],
+				"layout": Layout( title="Template instantiations with " + data_string[0][i]['compiler name'] + " " + data_string[0][i]['compiler version'] + " (" + data_string[0][i]['optimisation'] + " optimisation)", xaxis=dict(title='Stringek száma'), yaxis=dict(title='Template példányosítások'))
+				},
 			filename=path + '/template_instantiations.html');
-		if args.tex:
-			fo.write(data[0][i]['compiler name'] + " " + data[0][i]['compiler version'] + " " + data[0][i]['optimisation'] + " user_time picture goes here\n");
-			fo.write("This test was run with " + data[0][i]['compiler name'] + " (version " + data[0][i]['compiler version'] + ")");
-			if data[0][i]['optimisation'] == "no optimisation":
-				fo.write(" with no optimisation. ");
-			else:
-				fo.write(" with " + data[0][i]['optimisation'] + "optimisation. ");
-			fo.write("The graph shows how much templates were instantiated during compilation of files which contain a given number of compile-time strings. The first test contains " + str(args.lowest) + " strings, and the last test contains " + str(args.highest) + " strings. Each string is  " + str(args.length) + " characters long. The compiled source files contain the following lines:\n");
-			
-			fo.write("generated_" + str(args.lowest) + "_lines_" + str(args.length) + "_chars.cpp:\n")
-			p = Popen(['python', 'create_example.py', str(args.lowest), str(args.length)], stdout=PIPE, stderr=None, stdin=PIPE);
-			fo.write(p.stdout.read());
-
-			fo.write("generated_" + str(args.highest) + "_lines_" + str(args.length) + "_chars.cpp:\n")
-			p = Popen(['python', 'create_example.py', str(args.highest), str(args.length)], stdout=PIPE, stderr=None, stdin=PIPE);
-			fo.write(p.stdout.read());
-
-			fo.write("The graph shows that...\n");
+			if args.tex:
+				write_graph_description(path, "template-instantiations", data_string[0][i]['compiler name'], data_string[0][i]['compiler version'], data_string[0][i]['optimisation'], args.lowest, args.highest, args.length);
